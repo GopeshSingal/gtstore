@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package demo;
+
+service DemoService {
+  rpc Hello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+service ManagerService {
+  rpc GetNodeForKey (KeyRequest) returns (Ack);
+  rpc RemoveNode (NodeInfo) returns (RegisterAck);
+}
+
+service StorageNode {
+  rpc Get (KeyRequest) returns (ValueResponse);
+  rpc Put (KeyValuePair) returns (Ack);
+  rpc Remove (KeyRequest) returns (Ack);
+}
+
+service ClientService {
+  rpc Init (ClientInitRequest) returns (Ack);
+  rpc Finalize (Empty) returns (Ack);
+}
+
+// Message definitions
+message NodeInfo {
+  string node_id = 1;
+  string ip = 2;
+  int32 port = 3;
+}
+
+message RegisterAck {
+  bool success = 1;
+  string message = 2;
+}
+
+message Empty {}
+
+message NodeInfoList {
+  repeated NodeInfo nodes = 1;
+}
+
+message KeyRequest {
+  string key = 1;
+}
+
+message KeyValuePair {
+  string key = 1;
+  string value = 2;
+}
+
+message ValueResponse {
+  string value = 1;
+  bool found = 2;
+}
+
+message Ack {
+  bool success = 1;
+  string message = 2;
+}
+
+message ClientInitRequest {
+  string client_id = 1;
+}
