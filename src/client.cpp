@@ -99,7 +99,7 @@ private:
 	std::unique_ptr<StorageNode::Stub> stub_;
 };
 
-std::string get(std::string &key) {
+void get(std::string &key) {
 	DemoClient manager(grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
 	std::string addr = manager.getNode(key);
 	std::cout << "Get received: " << addr << std::endl;
