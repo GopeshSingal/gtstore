@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -5,6 +6,7 @@
 #include <grpcpp/grpcpp.h>
 #include "demo.grpc.pb.h"
 #include "demo.pb.h"
+#include "grpcpp/channel.h"
 
 using demo::KeyRequest;
 using demo::ValueResponse;
@@ -99,12 +101,13 @@ private:
 	std::unique_ptr<StorageNode::Stub> stub_;
 };
 
+std::unique_ptr<DemoClient> manager;
+
 void get(std::string &key) {
-	DemoClient manager(grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
-	std::string addr = manager.getNode(key);
+	std::string addr = manager->getNode(key);
 	std::cout << "Get received: " << addr << std::endl;
 	if (addr != bad_rpc) {
-		NodeClient node(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
+		NodeClient node = NodeClient(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
 		std::string output = node.retrieve(key);
 		if (output != bad_rpc && output != fail_resp) {
 			std::cout << "Value: " << output << std::endl;
@@ -117,11 +120,10 @@ void get(std::string &key) {
 }
 
 void put(std::string &key, std::string &value) {
-	DemoClient manager(grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
-	std::string addr = manager.getNode(key);
+	std::string addr = manager->getNode(key);
 	std::cout << "Put received: " << addr << std::endl;
 	if (addr != bad_rpc) {
-		NodeClient node(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
+		NodeClient node = NodeClient(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
 		std::string output = node.store(key, value);
 		std::cout << "Put status: " << output << std::endl;
 	} else {
@@ -129,13 +131,38 @@ void put(std::string &key, std::string &value) {
 	}
 }
 
+void init() {
+	manager = std::make_unique<DemoClient>(grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
+}
+
 int main(int argc, char **argv)
 {
-	std::string key = "Hello";
-	std::string value = "World";
-	put(key, value);
-	get(key);
-	key = "No";
-	get(key);
+	std::string operation;
+    std::string key = "";
+    std::string value = "";
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--put" && i + 1 < argc) {
+            operation = "put";
+            key = argv[++i];
+        } else if (arg == "--val" && i + 1 < argc) {
+            value = argv[++i];
+        } else if (arg == "--get" && i + 1 < argc) {
+            operation = "get";
+            key = argv[++i];
+        } else {
+            std::cerr << "Unknown or incomplete argument: " << arg << std::endl;
+            return 1;
+        }
+    }
+
+	init();
+
+    if (operation == "put" && !key.empty() && !value.empty()) {
+        put(key, value);
+    } else if (operation == "get" && !key.empty()) {
+        get(key);
+    }
 	return 0;
 }

@@ -30,7 +30,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
 		mutex hr_mutex;
 	public:
 		ManagerServiceImpl(int virtual_nodes) {
-			hash_ring.init(virtual_nodes);
+			hash_ring.init(3);
 			hash_ring.addNode("1");
 			hash_ring.addNode("2");
 			hash_ring.addNode("3");
