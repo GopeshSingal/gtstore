@@ -37,15 +37,15 @@ class GTStoreManager {
 
 class GTStoreStorage {
 		public:
-				void init(int id); // Add id to set up distinct ports for gRPC
+static void RunStorageNode(size_t port);
 };
 
 class ConsistentHashing {
 		public:
 			void init(int virtualNodes);
-			void addNode(const std::string &node);
+			size_t addNode(const std::string &node);
 			void removeNode(const std::string &node);
-			std::string getNode(const std::string &key);
+			std::string getNodeAddress(const std::string &key);
 			size_t hash_fn(const std::string &key);
 
 		private:
@@ -59,15 +59,17 @@ size_t ConsistentHashing::hash_fn(const std::string &key) {
 }
 
 void ConsistentHashing::init(int virtualNodes) {
+    cout << "initing hashring\n";
     virtualNodes_ = virtualNodes;
 }
 
-void ConsistentHashing::addNode(const std::string &node) {
-    for (int i = 0; i < virtualNodes_; ++i) {
-        std::string virtualNodeName = node + "-" + std::to_string(i);
+size_t ConsistentHashing::addNode(const std::string &node) {
+    // for (int i = 0; i < virtualNodes_; ++i) {
+        std::string virtualNodeName = node + "-" + std::to_string(0);
         size_t hash = hash_fn(virtualNodeName);
         ring_[hash] = node;
-    }
+        return hash;
+    // }
 }
 
 void ConsistentHashing::removeNode(const std::string &node) {
@@ -78,7 +80,7 @@ void ConsistentHashing::removeNode(const std::string &node) {
     }
 }
 
-std::string ConsistentHashing::getNode(const std::string &key) {
+std::string ConsistentHashing::getNodeAddress(const std::string &key) {
     if (ring_.empty()) {
         return "";
     }
@@ -90,7 +92,8 @@ std::string ConsistentHashing::getNode(const std::string &key) {
         it = ring_.begin();
     }
 
-    return it->second;
+    string server_address("0.0.0.0:" + it->second);
+    return server_address;
 }
 
 

@@ -19,9 +19,10 @@ using grpc::Status;
 
 using demo::ManagerService;
 using demo::NodeInfo;
-using demo::RegisterAck;
+using demo::Ack;
 using demo::KeyRequest;
 using demo::NodeInfo;
+using demo::KeyValuePair;
 
 class ManagerServiceImpl final : public ManagerService::Service {
 	private:
@@ -30,34 +31,39 @@ class ManagerServiceImpl final : public ManagerService::Service {
 	public:
 		ManagerServiceImpl(int virtual_nodes) {
 			hash_ring.init(virtual_nodes);
+			hash_ring.addNode("1");
+			hash_ring.addNode("2");
+			hash_ring.addNode("3");
+			hash_ring.addNode("4");
+			hash_ring.addNode("5");
 		}
-		Status GetNodeForKey(ServerContext* context, KeyRequest* request, NodeInfo* response) {
-			lock_guard<mutex> lock(hr_mutex);
-			string node_id = hash_ring.getNode(request->key());
+		Status GetNodeForKey(ServerContext* context, const KeyRequest* request, NodeInfo* response) {
+			// lock_guard<mutex> lock(hr_mutex);
+			string node_id = hash_ring.getNodeAddress(request->key());
 			if (node_id.empty()) {
 				return Status(grpc::StatusCode::NOT_FOUND, "No nodes available");
 			}
 			// ! Check health of node then 
 			response->set_node_id(node_id);
-			return Status(grpc::StatusCode::NOT_FOUND, "No nodes available");
+			return Status(grpc::StatusCode::OK, "Here's a Node");
 		}
-		Status RemoveNode(ServerContext* context, const NodeInfo* request, RegisterAck* response) override {
-			lock_guard<mutex> lock(hr_mutex);
-			string node_id = request->node_id();
-			hash_ring.removeNode(node_id);
-			response->set_success(true);
-			response->set_message("Node removed successfully");
-			cout << "Node removed: " << node_id << endl;
-			return Status::OK;
-			// ! Probably add some load balancing to make it all hunky dory
-		}
+		// Status RemoveNode(ServerContext* context, const NodeInfo* request, RegisterAck* response) override {
+		// 	lock_guard<mutex> lock(hr_mutex);
+		// 	string node_id = request->node_id();
+		// 	hash_ring.removeNode(node_id);
+		// 	response->set_success(true);
+		// 	response->set_message("Node removed successfully");
+		// 	cout << "Node removed: " << node_id << endl;
+		// 	return Status::OK;
+		// 	// ! Probably add some load balancing to make it all hunky dory
+		// }
 
 };
 
 void RunServer()
 {
   std::string server_address("0.0.0.0:50051");
-  ManagerServiceImpl service = ManagerServiceImpl(5);
+  ManagerServiceImpl service = ManagerServiceImpl(1);
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
