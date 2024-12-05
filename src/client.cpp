@@ -2,6 +2,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
+
 
 #include <grpcpp/grpcpp.h>
 #include "demo.grpc.pb.h"
@@ -26,7 +28,7 @@ class DemoClient
 public:
 	DemoClient(std::shared_ptr<Channel> channel) : stub_(demo::ManagerService::NewStub(channel)) {}
 
-	std::string getNode(const std::string &user)
+	std::vector<std::string> getNode(const std::string &user)
 	{
 		KeyRequest request;
 		request.set_key(user);
@@ -34,15 +36,18 @@ public:
 		ClientContext context;
 
 		Status status = stub_->GetNodeForKey(&context, request, &reply);
-
+		std::vector<std::string> x;
 		if (status.ok()) {
-			std::string port = reply.node_id();
+			for (const auto &id : reply.node_ids()) {
+				x.push_back(id);
+			}
 			// TODO Write service method to retrieve data from node :D
-			return port;
+			return x;
 		} else {
 			std::cout << status.error_code() << ": " << status.error_message()
 					<< std::endl;
-			return bad_rpc;
+			std::vector<std::string> x;
+			return x;
 		}
 	}
 
@@ -104,7 +109,8 @@ private:
 std::unique_ptr<DemoClient> manager;
 
 void get(std::string &key) {
-	std::string addr = manager->getNode(key);
+	std::vector<std::string> addrs = manager->getNode(key);
+	std::string addr = addrs[0];
 	std::cout << "Get received: " << addr << std::endl;
 	if (addr != bad_rpc) {
 		NodeClient node = NodeClient(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
@@ -120,12 +126,13 @@ void get(std::string &key) {
 }
 
 void put(std::string &key, std::string &value) {
-	std::string addr = manager->getNode(key);
-	std::cout << "Put received: " << addr << std::endl;
-	if (addr != bad_rpc) {
-		NodeClient node = NodeClient(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
-		std::string output = node.store(key, value);
-		std::cout << "Put status: " << output << std::endl;
+	std::vector<std::string> addrs = manager->getNode(key);
+	if (!addrs.empty()) {
+		for (const auto& port : addrs) {
+			NodeClient node = NodeClient(grpc::CreateChannel(port, grpc::InsecureChannelCredentials()));
+			std::string output = node.store(key, value);
+			std::cout << port.back() << std::endl;
+		}
 	} else {
 		std::cout << "PUT: Node RPC Failed. Node may not exist\n";
 	}

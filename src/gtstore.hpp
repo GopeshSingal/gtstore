@@ -45,10 +45,8 @@ class ConsistentHashing {
 			void init(int virtualNodes);
 			size_t addNode(const std::string &node);
 			void removeNode(const std::string &node);
-			std::string getNodeAddress(const std::string &key);
+			vector<string> getNodeAddress(const std::string &key, int k);
 			size_t hash_fn(const std::string &key);
-
-		private:
 			int virtualNodes_;
 			std::map<size_t, std::string> ring_;
 };
@@ -80,9 +78,10 @@ void ConsistentHashing::removeNode(const std::string &node) {
     }
 }
 
-std::string ConsistentHashing::getNodeAddress(const std::string &key) {
+vector<string> ConsistentHashing::getNodeAddress(const std::string &key, int k) {
     if (ring_.empty()) {
-        return "";
+        vector<string> empty;
+        return empty;
     }
 
     size_t hash = hash_fn(key);
@@ -92,8 +91,19 @@ std::string ConsistentHashing::getNodeAddress(const std::string &key) {
         it = ring_.begin();
     }
 
-    string server_address("0.0.0.0:" + it->second);
-    return server_address;
+    vector<string> res;
+    int curr = stoi(it->second);
+    res.push_back("0.0.0.0:" + it->second);
+
+    for (int i = 0; i < k; i++) {
+        curr = curr + 1;
+        if (curr >= virtualNodes_) {
+            curr = 1;
+        }
+        res.push_back(("0.0.0.0:" + to_string(curr)));
+    }
+
+    return res;
 }
 
 

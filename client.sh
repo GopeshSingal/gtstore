@@ -37,3 +37,4 @@ else
     echo "  --put <key> --val <value>  Perform a put operation."
     echo "  --get <key>                Perform a get operation."
     exit 1
+fi

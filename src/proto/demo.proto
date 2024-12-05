@@ -24,6 +24,7 @@ service StorageNode {
   rpc Get (KeyRequest) returns (ValueResponse);
   rpc Put (KeyValuePair) returns (Ack);
   rpc Remove (KeyRequest) returns (Ack);
+  rpc GetReplica (KeyValuePair) returns (Ack);
 }
 
 service ClientService {
@@ -36,6 +37,7 @@ message NodeInfo {
   string node_id = 1;
   string ip = 2;
   int32 port = 3;
+  repeated string node_ids = 4;
 }
 
 message RegisterAck {
