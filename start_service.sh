@@ -18,14 +18,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Use default values if flags are not provided
 NUM_NODES=${NUM_NODES:-5}
 REPLICATION=${REPLICATION:-1}
 
 EXECUTABLE="./build/src/storage"
 
+DEFAULT_COUNT=5
 
-for i in $(seq 0 $((NUM_NODES - 1))); do
+TIMEOUT_DURATION=5
+
+for i in $(seq 1 $((NUM_NODES))); do
     $EXECUTABLE $i &
 done
 
-./build/src/manager 
+./build/src/manager --nodes $NUM_NODES --rep $REPLICATION

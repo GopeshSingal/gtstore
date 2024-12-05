@@ -28,26 +28,24 @@ class ManagerServiceImpl final : public ManagerService::Service {
 	private:
 		ConsistentHashing hash_ring;
 		mutex hr_mutex;
+		int k;
+		int n;
 	public:
-		ManagerServiceImpl(int virtual_nodes) {
-			hash_ring.init(3);
-			// for (i in virtual nodes) {
-			// 	hash_ring.addNode(i);
-			// }
-			hash_ring.addNode("1");
-			// hash_ring.addNode("2");
-			// hash_ring.addNode("3");
-			// hash_ring.addNode("4");
-			// hash_ring.addNode("5");
+		ManagerServiceImpl(int storage_nodes, int replica_factor) {
+			n = storage_nodes;
+			hash_ring.init(storage_nodes);
+			for (int i = 1; i < n; i++) {
+				hash_ring.addNode(to_string(i));
+			}
+			k = replica_factor;
 		}
 		Status GetNodeAddrForKey(ServerContext* context, const KeyRequest* request, NodeInfo* response) {
 			// lock_guard<mutex> lock(hr_mutex);
-			string node_id = hash_ring.getNodeAddress(request->key());
-			if (node_id.empty()) {
-				return Status(grpc::StatusCode::NOT_FOUND, "Node not found");
-			}
+			vector<string> node_ids = hash_ring.getNodeAddress(request->key(), k);
 			// ! Check health of node then 
-			response->set_node_id(node_id);
+			for (const auto&id : node_ids) {
+				response->add_node_ids(id);
+			}
 			return Status(grpc::StatusCode::OK, "Here's a Node");
 		}
 		Status RemoveNode(ServerContext* context, const NodeInfo* request, Ack* response) {
@@ -63,12 +61,11 @@ class ManagerServiceImpl final : public ManagerService::Service {
 
 };
 
-// void RunServer(int virtual_nodes)
-void RunServer()
+void RunServer(int storage_nodes, int replica_factor)
 {
 
   std::string server_address("0.0.0.0:50051");
-  ManagerServiceImpl service = ManagerServiceImpl(1);
+  ManagerServiceImpl service = ManagerServiceImpl(storage_nodes, replica_factor);
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
@@ -85,6 +82,20 @@ void RunServer()
 
 int main(int argc, char **argv)
 {
-  RunServer();
-  return 0;
+	int storage_nodes = 5;
+	int replica_factor = 3;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--nodes" && i + 1 < argc) {
+            storage_nodes = std::stoi(argv[++i]);
+			storage_nodes += 1;
+        } else if (arg == "--rep" && i + 1 < argc) {
+            replica_factor = std::stoi(argv[++i]);
+        } else {
+            std::cerr << "Unknown argument: " << arg << std::endl;
+            return 1; 
+        }
+    }
+    RunServer(storage_nodes, replica_factor);
+    return 0;
 }

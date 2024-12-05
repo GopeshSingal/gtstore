@@ -48,6 +48,14 @@ class StorageNodeImpl final : public StorageNode::Service {
 		}
 		return Status::OK;
 	}
+	Status GetReplica(ServerContext* context, const KeyValuePair* request, Ack* response) override {
+		// lock_guard<mutex> lock(kv_mutex);
+		kv_store[request->key()] = request->value();
+		cout << "Storing replica key: " << request->key() << " value: " << request->value() << endl;
+		response->set_success(true);
+		response->set_message("Key-value pair replicated successfully");
+		return Status::OK;
+	}
 };
 
 void RunStorageNode(int port) {
