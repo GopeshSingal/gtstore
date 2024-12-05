@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <grpcpp/support/status_code_enum.h>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -23,12 +24,13 @@ using grpc::Status;
 std::string target_str = "localhost:50051";
 std::string fail_resp = "Failed";
 std::string bad_rpc = "RPC failed";
+std::string timeout = "Timeout";
 class DemoClient
 {
 public:
 	DemoClient(std::shared_ptr<Channel> channel) : stub_(demo::ManagerService::NewStub(channel)) {}
 
-	std::vector<std::string> getNode(const std::string &user)
+	std::vector<std::string> findNode(const std::string &user)
 	{
 		KeyRequest request;
 		request.set_key(user);
@@ -51,6 +53,25 @@ public:
 		}
 	}
 
+	std::string deleteNode(const std::string &node)
+	{
+		NodeInfo request;
+		request.set_node_id(node);
+		Ack reply;
+		ClientContext context;
+
+		Status status = stub_->RemoveNode(&context, request, &reply);
+
+		if (status.ok()) {
+			std::string port = reply.message();
+			return port;
+		} else {
+			// std::cout << status.error_code() << ": " << status.error_message()
+					// << std::endl;
+			return bad_rpc;
+		}
+	}
+
 private:
 	std::unique_ptr<demo::ManagerService::Stub> stub_;
 };
@@ -62,22 +83,27 @@ public:
 
 	std::string retrieve(const std::string &key)
 	{
+		ClientContext context;
+		auto deadline = std::chrono::system_clock::now() + std::chrono::seconds(1);
+        context.set_deadline(deadline);
+
 		demo::KeyRequest request;
 		request.set_key(key);
 		demo::ValueResponse resp;
-		ClientContext context;
+		std::cout << "Before timeout\n";
 		Status status = stub_->Get(&context, request, &resp);
-		
+		std::cout << "After timeout\n";
 		if (status.ok()) {
 			if (resp.found()) {
 				return resp.value();
 			} else {
 				return fail_resp;
 			}
-
+		} else if (status.error_code() == grpc::StatusCode::DEADLINE_EXCEEDED) {
+			return timeout;
 		} else {
-			std::cout << status.error_code() << ": " << status.error_message()
-					<< std::endl;
+			// std::cout << status.error_code() << ": " << status.error_message()
+					// << std::endl;
 			return bad_rpc;
 		}
 	}
@@ -96,8 +122,8 @@ public:
 			std::string resp = reply.message() + " " + grpc::to_string(reply.success());
 			return reply.message();
 		} else {
-			std::cout << status.error_code() << ": " << status.error_message()
-					<< std::endl;
+			// std::cout << status.error_code() << ": " << status.error_message()
+					// << std::endl;
 			return bad_rpc;
 		}
 	}
@@ -109,17 +135,24 @@ private:
 std::unique_ptr<DemoClient> manager;
 
 void get(std::string &key) {
+
 	std::vector<std::string> addrs = manager->getNode(key);
 	std::string addr = addrs[0];
+  size_t pos = addr.find(':');
+  std::string id = addr.substr(pos + 1);
 	std::cout << "Get received: " << addr << std::endl;
 	if (addr != bad_rpc) {
 		NodeClient node = NodeClient(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
 		std::string output = node.retrieve(key);
-		if (output != bad_rpc && output != fail_resp) {
-			std::cout << "Value: " << output << std::endl;
+		if (output != bad_rpc && output != fail_resp && output != timeout) {
+			std::cout << key << ", " << output << ", " << id << std::endl;
 		} else if (output == fail_resp) {
 			std::cout << "Key does not exist. Value could not be found\n";
-		} else {
+		} else if (output == timeout) {
+			manager->deleteNode(id);
+			std::cout << "Node does not exist\n";
+		}
+		else {
 			std::cout << "GET: Node RPC Failed. Node may not exist\n";
 		}
 	}
@@ -140,6 +173,10 @@ void put(std::string &key, std::string &value) {
 
 void init() {
 	manager = std::make_unique<DemoClient>(grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
+}
+
+void finalize(){
+	std::cout <<"Finalized" << std::endl;
 }
 
 int main(int argc, char **argv)

@@ -57,7 +57,7 @@ size_t ConsistentHashing::hash_fn(const std::string &key) {
 }
 
 void ConsistentHashing::init(int virtualNodes) {
-    cout << "initing hashring\n";
+    // cout << "initing hashring\n";
     virtualNodes_ = virtualNodes;
 }
 
@@ -71,11 +71,14 @@ size_t ConsistentHashing::addNode(const std::string &node) {
 }
 
 void ConsistentHashing::removeNode(const std::string &node) {
-    for (int i = 0; i < virtualNodes_; ++i) {
-        std::string virtualNodeName = node + "-" + std::to_string(i);
+    // for (int i = 0; i < virtualNodes_; ++i) {
+        std::string virtualNodeName = node + "-" + std::to_string(0);
         size_t hash = hash_fn(virtualNodeName);
         ring_.erase(hash);
-    }
+        for (const auto& pair : ring_) {
+        std::cout << "Key: " << pair.first << ", Value: " << pair.second << std::endl;
+        }
+    // }
 }
 
 vector<string> ConsistentHashing::getNodeAddress(const std::string &key, int k) {

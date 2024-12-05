@@ -39,7 +39,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
 			}
 			k = replica_factor;
 		}
-		Status GetNodeForKey(ServerContext* context, const KeyRequest* request, NodeInfo* response) {
+		Status GetNodeAddrForKey(ServerContext* context, const KeyRequest* request, NodeInfo* response) {
 			// lock_guard<mutex> lock(hr_mutex);
 			vector<string> node_ids = hash_ring.getNodeAddress(request->key(), k);
 			// ! Check health of node then 
@@ -48,21 +48,22 @@ class ManagerServiceImpl final : public ManagerService::Service {
 			}
 			return Status(grpc::StatusCode::OK, "Here's a Node");
 		}
-		// Status RemoveNode(ServerContext* context, const NodeInfo* request, RegisterAck* response) override {
-		// 	lock_guard<mutex> lock(hr_mutex);
-		// 	string node_id = request->node_id();
-		// 	hash_ring.removeNode(node_id);
-		// 	response->set_success(true);
-		// 	response->set_message("Node removed successfully");
-		// 	cout << "Node removed: " << node_id << endl;
-		// 	return Status::OK;
-		// 	// ! Probably add some load balancing to make it all hunky dory
-		// }
+		Status RemoveNode(ServerContext* context, const NodeInfo* request, Ack* response) {
+			// lock_guard<mutex> lock(hr_mutex);
+			string node_id = request->node_id();
+			hash_ring.removeNode(node_id);
+			response->set_success(true);
+			response->set_message("Node removed successfully");
+			// cout << "Node removed: " << node_id << endl;
+			return Status::OK;
+			// ! Probably add some load balancing to make it all hunky dory
+		}
 
 };
 
 void RunServer(int storage_nodes, int replica_factor)
 {
+
   std::string server_address("0.0.0.0:50051");
   ManagerServiceImpl service = ManagerServiceImpl(storage_nodes, replica_factor);
 
@@ -76,6 +77,7 @@ void RunServer(int storage_nodes, int replica_factor)
   std::cout << "Manager listening on " << server_address << std::endl;
 
   server->Wait();
+//   virtual_nodes += 0;
 }
 
 int main(int argc, char **argv)
