@@ -15,9 +15,9 @@ message HelloReply {
 }
 
 service ManagerService {
-  rpc GetNodeForKey (KeyRequest) returns (NodeInfo);
+  rpc GetNodeAddrForKey (KeyRequest) returns (NodeInfo);
   rpc PutKeyValue (KeyValuePair) returns (Ack);
-  rpc RemoveNode (NodeInfo) returns (RegisterAck);
+  rpc RemoveNode (NodeInfo) returns (Ack);
 }
 
 service StorageNode {

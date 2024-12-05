@@ -24,15 +24,17 @@ using demo::ValueResponse;
 using demo::KeyValuePair;
 using demo::Ack;
 
+int id = 0;
 class StorageNodeImpl final : public StorageNode::Service {
 	unordered_map<string, string> kv_store;
 	mutex kv_mutex;
 	Status Put(ServerContext* context, const KeyValuePair* request, Ack* response) override {
 		// lock_guard<mutex> lock(kv_mutex);
 		kv_store[request->key()] = request->value();
-		std::cout << "Storing key: " << request->key() << " value: " << request->value() << std::endl;
+		// std::cout << "Storing key: " << request->key() << " value: " << request->value() << std::endl;
 		response->set_success(true);
-		response->set_message("Key-value pair stored successfully!");
+		std::string resp = "Key-value pair stored successfully on node " + to_string(id) + "\n!";
+		response->set_message(resp);
 		return Status::OK;
 	}
 	Status Get(ServerContext* context, const KeyRequest* request, ValueResponse* response) override {
@@ -49,6 +51,7 @@ class StorageNodeImpl final : public StorageNode::Service {
 };
 
 void RunStorageNode(int port) {
+	id = port;
 	string server_address("0.0.0.0:" + to_string(port));
 	StorageNodeImpl node;
 	ServerBuilder builder;
